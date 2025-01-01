@@ -42,6 +42,12 @@ func main() {
 		Config:      &mapConfig,
 	})
 
+	registerCommand(Command{
+		Name:        "explore",
+		Description: "Explore a location to find Pokemon",
+		Handler:     commandExplore,
+	})
+
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
@@ -49,8 +55,9 @@ func main() {
 			words := cleanInput(scanner.Text())
 			if len(words) > 0 {
 				command := words[0]
+				args := words[1:]
 				if cmd, ok := commands[command]; ok {
-					if err := cmd.Handler(cmd.Config); err != nil {
+					if err := cmd.Handler(cmd.Config, args); err != nil {
 						fmt.Println("Error:", err)
 					}
 				} else {
@@ -74,7 +81,7 @@ func cleanInput(text string) []string {
 type Command struct {
 	Name        string
 	Description string
-	Handler     func(c *Config) error
+	Handler     func(c *Config, args []string) error
 	Config      *Config
 }
 
@@ -83,13 +90,13 @@ type Config struct {
 	Previous *string
 }
 
-func commandExit(c *Config) error {
+func commandExit(c *Config, _ []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *Config) error {
+func commandHelp(c *Config, _ []string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")
@@ -99,7 +106,7 @@ func commandHelp(c *Config) error {
 	return nil
 }
 
-func commandMap(c *Config) error {
+func commandMap(c *Config, _ []string) error {
 	if c.Next == nil && c.Previous != nil {
 		fmt.Println("you're on the last page")
 		return nil
@@ -120,7 +127,7 @@ func commandMap(c *Config) error {
 	return nil
 }
 
-func commandMapBack(c *Config) error {
+func commandMapBack(c *Config, _ []string) error {
 	if c.Previous == nil {
 		fmt.Println("you're on the first page")
 		return nil
@@ -136,5 +143,23 @@ func commandMapBack(c *Config) error {
 	c.Next = resp.Next
 	c.Previous = resp.Previous
 
+	return nil
+}
+
+func commandExplore(_ *Config, args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("expected location name")
+	}
+	location := args[0]
+	fmt.Printf("Exploring %s...\n", location)
+	details, err := pokeapi.GetLocationDetails(location)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+	fmt.Println("Found Pokemon:")
+	for _, encounter := range details.PokemonEncounters {
+		fmt.Printf("  - %s\n", encounter.Pokemon.Name)
+	}
 	return nil
 }
