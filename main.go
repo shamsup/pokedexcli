@@ -3,9 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"internal/pokeapi"
 	"os"
 	"strings"
+
+	"github.com/shamsup/pokedexcli/internal/pokeapi"
 )
 
 var commands = map[string]Command{}
